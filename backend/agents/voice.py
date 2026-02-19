@@ -45,6 +45,10 @@ def generate_tts(text: str, filename: str, voice_id: str = "English_expressive_n
     resp.raise_for_status()
     data = resp.json()
 
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise RuntimeError(f"MiniMax TTS error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
+
     if "data" not in data or "audio" not in data["data"]:
         raise RuntimeError(f"TTS failed: {json.dumps(data)[:500]}")
 

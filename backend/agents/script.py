@@ -51,7 +51,13 @@ def run(outline: dict) -> dict:
     resp.raise_for_status()
     data = resp.json()
 
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise RuntimeError(f"MiniMax API error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
+
     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    if not content:
+        raise RuntimeError("MiniMax API returned empty response")
     content = content.strip()
     if content.startswith("```"):
         content = content.split("\n", 1)[1] if "\n" in content else content[3:]

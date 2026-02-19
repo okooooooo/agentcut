@@ -18,6 +18,9 @@ def create_video_task(prompt: str, duration: int = 6) -> str:
     resp = requests.post(url, headers=HEADERS, json=payload)
     resp.raise_for_status()
     data = resp.json()
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise RuntimeError(f"MiniMax API error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
     task_id = data.get("task_id", "")
     if not task_id:
         raise RuntimeError(f"Video task creation failed: {data}")

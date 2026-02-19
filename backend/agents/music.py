@@ -31,6 +31,10 @@ def run(style: str, mood: str, total_duration: int, on_progress=None) -> str:
     resp.raise_for_status()
     data = resp.json()
 
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise RuntimeError(f"MiniMax Music error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
+
     if "data" not in data or "audio" not in data["data"]:
         raise RuntimeError(f"Music generation failed: {json.dumps(data)[:500]}")
 

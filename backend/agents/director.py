@@ -58,7 +58,14 @@ def run(user_prompt: str, duration: int = 30, num_shots: int = 3) -> dict:
     resp.raise_for_status()
     data = resp.json()
 
+    # Check for API-level errors (e.g. insufficient balance)
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise RuntimeError(f"MiniMax API error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
+
     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    if not content:
+        raise RuntimeError("MiniMax API returned empty response")
 
     # Parse JSON from response (handle potential markdown wrapping)
     content = content.strip()
