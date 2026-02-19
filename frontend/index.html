@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentCut - AI Director</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text x='50' y='68' font-size='50' font-weight='bold' fill='white' text-anchor='middle' font-family='system-ui'>AC</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eff6ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#1e1b4b' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+    @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-in { animation: slide-in 0.3s ease-out; }
+    body { background: #0a0a0f; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+    .glass { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); backdrop-filter: blur(12px); }
+    .glow { box-shadow: 0 0 30px rgba(99,102,241,0.15); }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Header -->
+  <header class="border-b border-white/5 py-4">
+    <div class="max-w-5xl mx-auto px-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold text-sm">AC</div>
+        <h1 class="text-xl font-semibold text-white">AgentCut</h1>
+        <span class="text-xs text-white/30 ml-1">Multi-Agent Video Production</span>
+      </div>
+      <a href="https://github.com/calderbuild" target="_blank" class="text-white/40 hover:text-white/70 text-sm">GitHub</a>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <!-- Input Section -->
+    <section id="input-section" class="mb-12">
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-white mb-3">Describe your video, let the AI crew handle the rest.</h2>
+        <p class="text-white/50 text-lg">6 specialized agents collaborate to produce your video from a single prompt.</p>
+      </div>
+
+      <div class="glass rounded-2xl p-6 glow">
+        <textarea id="prompt-input" rows="3" placeholder="e.g. A 30-second cinematic product intro for an AI writing assistant, highlighting speed and quality..."
+          class="w-full bg-transparent text-white placeholder-white/20 text-lg resize-none focus:outline-none mb-4"></textarea>
+
+        <div class="flex items-center justify-between">
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 text-sm text-white/50">
+              <span>Duration</span>
+              <select id="duration-select" class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm">
+                <option value="18-3">18s (3 shots)</option>
+                <option value="30-3" selected>30s (3 shots)</option>
+                <option value="30-5">30s (5 shots)</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-2 text-sm text-white/50">
+              <input type="checkbox" id="music-toggle" checked class="rounded">
+              <span>Background Music</span>
+            </label>
+          </div>
+
+          <button id="create-btn" onclick="startProduction()"
+            class="bg-brand-500 hover:bg-brand-600 text-white px-6 py-2.5 rounded-xl font-medium transition-colors flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Start Production
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Templates -->
+      <div class="flex gap-3 mt-4 flex-wrap">
+        <button onclick="setTemplate('A 30-second cinematic product intro for an AI writing assistant, highlighting speed and quality. Futuristic tech style.')"
+          class="text-xs px-3 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors">
+          Tech Product Intro
+        </button>
+        <button onclick="setTemplate('A 30-second travel vlog opening showing stunning aerial views of Santorini, Greece. Warm, inviting cinematic style.')"
+          class="text-xs px-3 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors">
+          Travel Vlog
+        </button>
+        <button onclick="setTemplate('A 15-second social media ad for a fitness app. Dynamic, energetic editing with bold text overlays.')"
+          class="text-xs px-3 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors">
+          Social Media Ad
+        </button>
+      </div>
+    </section>
+
+    <!-- Agent Pipeline Visualization -->
+    <section id="pipeline-section" class="hidden mb-12">
+      <h3 class="text-lg font-semibold text-white mb-6">Agent Pipeline</h3>
+
+      <div class="grid grid-cols-6 gap-3 mb-8">
+        <div id="stage-director" class="agent-card glass rounded-xl p-4 text-center opacity-30">
+          <div class="text-2xl mb-2">&#x1f3ac;</div>
+          <div class="text-sm font-medium text-white">Director</div>
+          <div class="text-xs text-white/40 mt-1">Planning</div>
+          <div class="stage-status text-xs mt-2 text-brand-500 hidden">Working...</div>
+        </div>
+        <div id="stage-script" class="agent-card glass rounded-xl p-4 text-center opacity-30">
+          <div class="text-2xl mb-2">&#x1f4dd;</div>
+          <div class="text-sm font-medium text-white">Script</div>
+          <div class="text-xs text-white/40 mt-1">Writing</div>
+          <div class="stage-status text-xs mt-2 text-brand-500 hidden">Working...</div>
+        </div>
+        <div id="stage-visual" class="agent-card glass rounded-xl p-4 text-center opacity-30">
+          <div class="text-2xl mb-2">&#x1f3a5;</div>
+          <div class="text-sm font-medium text-white">Visual</div>
+          <div class="text-xs text-white/40 mt-1">Generating</div>
+          <div class="stage-status text-xs mt-2 text-brand-500 hidden">Working...</div>
+        </div>
+        <div id="stage-voice" class="agent-card glass rounded-xl p-4 text-center opacity-30">
+          <div class="text-2xl mb-2">&#x1f399;</div>
+          <div class="text-sm font-medium text-white">Voice</div>
+          <div class="text-xs text-white/40 mt-1">Recording</div>
+          <div class="stage-status text-xs mt-2 text-brand-500 hidden">Working...</div>
+        </div>
+        <div id="stage-music" class="agent-card glass rounded-xl p-4 text-center opacity-30">
+          <div class="text-2xl mb-2">&#x1f3b5;</div>
+          <div class="text-sm font-medium text-white">Music</div>
+          <div class="text-xs text-white/40 mt-1">Composing</div>
+          <div class="stage-status text-xs mt-2 text-brand-500 hidden">Working...</div>
+        </div>
+        <div id="stage-editor" class="agent-card glass rounded-xl p-4 text-center opacity-30">
+          <div class="text-2xl mb-2">&#x2702;</div>
+          <div class="text-sm font-medium text-white">Editor</div>
+          <div class="text-xs text-white/40 mt-1">Compositing</div>
+          <div class="stage-status text-xs mt-2 text-brand-500 hidden">Working...</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="glass rounded-xl p-4 mb-6">
+        <div class="flex justify-between text-sm mb-2">
+          <span id="progress-label" class="text-white/60">Starting production...</span>
+          <span id="progress-pct" class="text-brand-500 font-medium">0%</span>
+        </div>
+        <div class="w-full bg-white/5 rounded-full h-2">
+          <div id="progress-bar" class="bg-brand-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="glass rounded-xl p-4">
+        <h4 class="text-sm font-medium text-white/60 mb-3">Production Log</h4>
+        <div id="event-log" class="space-y-2 max-h-48 overflow-y-auto text-sm">
+        </div>
+      </div>
+    </section>
+
+    <!-- Output Section -->
+    <section id="output-section" class="hidden mb-12">
+      <h3 class="text-lg font-semibold text-white mb-6">Your Video</h3>
+      <div class="glass rounded-2xl p-6 glow">
+        <video id="output-video" controls class="w-full rounded-xl mb-4 bg-black"></video>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-white/40" id="video-info"></span>
+          <a id="download-btn" href="#" download class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2 rounded-xl font-medium text-sm transition-colors">
+            Download MP4
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 py-6 mt-20">
+    <div class="max-w-5xl mx-auto px-6 flex justify-between items-center text-sm text-white/30">
+      <span>Built with Multi-Agent SOP Architecture</span>
+      <span>Powered by MiniMax Hailuo + Speech-2.6 + Music-2.0</span>
+    </div>
+  </footer>
+
+  <script>
+    const API_BASE = '/api';
+    let currentJobId = null;
+
+    function setTemplate(text) {
+      document.getElementById('prompt-input').value = text;
+    }
+
+    async function startProduction() {
+      const prompt = document.getElementById('prompt-input').value.trim();
+      if (!prompt) return;
+
+      const durationVal = document.getElementById('duration-select').value;
+      const [duration, numShots] = durationVal.split('-').map(Number);
+      const includeMusic = document.getElementById('music-toggle').checked;
+
+      // Show pipeline, hide output
+      document.getElementById('pipeline-section').classList.remove('hidden');
+      document.getElementById('output-section').classList.add('hidden');
+      document.getElementById('event-log').innerHTML = '';
+      document.getElementById('create-btn').disabled = true;
+      document.getElementById('create-btn').textContent = 'Producing...';
+
+      // Reset agent cards
+      document.querySelectorAll('.agent-card').forEach(c => {
+        c.classList.add('opacity-30');
+        c.classList.remove('glow');
+        c.querySelector('.stage-status').classList.add('hidden');
+      });
+
+      try {
+        const resp = await fetch(`${API_BASE}/create`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ prompt, duration, num_shots: numShots, include_music: includeMusic }),
+        });
+        const data = await resp.json();
+        currentJobId = data.job_id;
+        pollEvents(data.job_id);
+      } catch (err) {
+        addLog('error', `Failed to start: ${err.message}`);
+        resetButton();
+      }
+    }
+
+    function pollEvents(jobId) {
+      const eventSource = new EventSource(`${API_BASE}/stream/${jobId}`);
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleEvent(data);
+
+        if (data.stage === 'done') {
+          eventSource.close();
+          if (data.data.status === 'completed') {
+            showOutput(jobId);
+          } else {
+            addLog('error', data.message);
+          }
+          resetButton();
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        // Fallback: poll status
+        setTimeout(() => pollStatus(jobId), 2000);
+      };
+    }
+
+    async function pollStatus(jobId) {
+      try {
+        const resp = await fetch(`${API_BASE}/status/${jobId}`);
+        const data = await resp.json();
+
+        if (data.status === 'completed') {
+          showOutput(jobId);
+          resetButton();
+        } else if (data.status === 'failed') {
+          addLog('error', `Failed: ${data.error}`);
+          resetButton();
+        } else {
+          setTimeout(() => pollStatus(jobId), 2000);
+        }
+      } catch { setTimeout(() => pollStatus(jobId), 3000); }
+    }
+
+    const stageMap = {
+      director: 'stage-director',
+      script: 'stage-script',
+      visual: 'stage-visual',
+      voice: 'stage-voice',
+      music: 'stage-music',
+      editor: 'stage-editor',
+    };
+
+    function handleEvent(data) {
+      // Update progress
+      const pct = Math.round(data.progress * 100);
+      document.getElementById('progress-bar').style.width = `${pct}%`;
+      document.getElementById('progress-pct').textContent = `${pct}%`;
+      document.getElementById('progress-label').textContent = data.message;
+
+      // Highlight active agent
+      const cardId = stageMap[data.stage];
+      if (cardId) {
+        const card = document.getElementById(cardId);
+        card.classList.remove('opacity-30');
+        card.classList.add('glow');
+        const status = card.querySelector('.stage-status');
+        status.textContent = data.message;
+        status.classList.remove('hidden');
+      }
+
+      // Add log entry
+      addLog(data.stage, data.message);
+    }
+
+    function addLog(stage, message) {
+      const log = document.getElementById('event-log');
+      const stageColors = {
+        director: 'text-purple-400',
+        script: 'text-blue-400',
+        visual: 'text-green-400',
+        voice: 'text-yellow-400',
+        music: 'text-pink-400',
+        editor: 'text-orange-400',
+        complete: 'text-brand-500',
+        error: 'text-red-400',
+        done: 'text-white/60',
+      };
+      const color = stageColors[stage] || 'text-white/40';
+      const time = new Date().toLocaleTimeString();
+
+      log.innerHTML += `<div class="slide-in flex gap-3">
+        <span class="text-white/20 shrink-0">${time}</span>
+        <span class="${color} font-medium shrink-0 w-16">${stage}</span>
+        <span class="text-white/60">${message}</span>
+      </div>`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function showOutput(jobId) {
+      const section = document.getElementById('output-section');
+      section.classList.remove('hidden');
+
+      const video = document.getElementById('output-video');
+      video.src = `${API_BASE}/download/${jobId}`;
+
+      const downloadBtn = document.getElementById('download-btn');
+      downloadBtn.href = `${API_BASE}/download/${jobId}`;
+    }
+
+    function resetButton() {
+      const btn = document.getElementById('create-btn');
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg> Start Production`;
+    }
+  </script>
+</body>
+</html>

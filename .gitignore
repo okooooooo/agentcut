@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 .next/
 output/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
