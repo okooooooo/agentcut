@@ -156,7 +156,7 @@ def run(
             "-map", v_map, "-map", audio_mix,
             "-c:v", "libx264", "-preset", "fast",
             "-c:a", "aac", "-b:a", "192k",
-            "-shortest",
+            "-t", str(video_duration),
             output_path,
         ]
     else:
@@ -170,7 +170,7 @@ def run(
             "-map", "0:v", "-map", "1:a",
             "-c:v", "libx264", "-preset", "fast",
             "-c:a", "aac", "-b:a", "192k",
-            "-shortest",
+            "-t", str(video_duration),
             output_path,
         ])
 
