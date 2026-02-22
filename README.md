@@ -6,6 +6,10 @@
 
 Turn a text prompt into a fully produced video. 6 AI agents collaborate through a structured pipeline -- from creative direction to final cut.
 
+<p align="center">
+  <img src="docs/images/landing.png" width="80%" alt="AgentCut Landing Page" />
+</p>
+
 ## How It Works
 
 ```
@@ -32,7 +36,19 @@ User Prompt
 Final MP4
 ```
 
-Visual, Voice, and Music agents run in parallel after the Script is ready. The Editor waits for all three, then composites the final video.
+Visual, Voice, and Music agents run **in parallel** after the Script is ready. The Editor waits for all three, then composites the final video.
+
+<p align="center">
+  <img src="docs/images/pipeline.png" width="80%" alt="Pipeline Running" />
+</p>
+
+## Features
+
+- **Multi-agent SOP** -- 6 specialized agents, each with a single responsibility, orchestrated in a production pipeline
+- **Parallel execution** -- Video, voice, and music generation run concurrently to minimize total wait time
+- **Real-time progress** -- SSE streaming shows every agent's status and logs as the pipeline runs
+- **One prompt, full video** -- From text description to a complete MP4 with narration, subtitles, and background music
+- **~$0.50 per video** -- Typical cost for a 3-shot video using MiniMax APIs
 
 ## Tech Stack
 
