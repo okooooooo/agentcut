@@ -4,7 +4,7 @@ import json
 from backend.config import MINIMAX_BASE_URL, OUTPUT_DIR, api_session
 
 
-def run(style: str, mood: str, total_duration: int, on_progress=None) -> str:
+def run(style: str, mood: str, total_duration: int, on_progress=None, output_dir: str = None) -> str:
     """Generate background music matching the video mood. Returns local file path."""
     if on_progress:
         on_progress("Generating background music...", 0, 1)
@@ -38,7 +38,7 @@ def run(style: str, mood: str, total_duration: int, on_progress=None) -> str:
         raise RuntimeError(f"Music generation failed: {json.dumps(data)[:500]}")
 
     audio_bytes = bytes.fromhex(data["data"]["audio"])
-    out_path = os.path.join(OUTPUT_DIR, "bgm.mp3")
+    out_path = os.path.join(output_dir or OUTPUT_DIR, "bgm.mp3")
     with open(out_path, "wb") as f:
         f.write(audio_bytes)
 

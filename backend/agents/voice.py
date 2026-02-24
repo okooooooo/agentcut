@@ -4,7 +4,7 @@ import json
 from backend.config import MINIMAX_BASE_URL, OUTPUT_DIR, api_session
 
 
-def generate_tts(text: str, filename: str, voice_id: str = "English_expressive_narrator", mood: str = "neutral") -> str:
+def generate_tts(text: str, filename: str, voice_id: str = "English_expressive_narrator", mood: str = "neutral", output_dir: str = None) -> str:
     """Generate TTS audio for text, return local file path."""
     url = f"{MINIMAX_BASE_URL}/t2a_v2"
 
@@ -52,13 +52,13 @@ def generate_tts(text: str, filename: str, voice_id: str = "English_expressive_n
         raise RuntimeError(f"TTS failed: {json.dumps(data)[:500]}")
 
     audio_bytes = bytes.fromhex(data["data"]["audio"])
-    out_path = os.path.join(OUTPUT_DIR, filename)
+    out_path = os.path.join(output_dir or OUTPUT_DIR, filename)
     with open(out_path, "wb") as f:
         f.write(audio_bytes)
     return out_path
 
 
-def run(script: dict, on_progress=None) -> list:
+def run(script: dict, on_progress=None, output_dir: str = None) -> list:
     """Generate voiceover for all shots. Returns list of audio file paths."""
     shots = script["shots"]
     results = []
@@ -67,7 +67,7 @@ def run(script: dict, on_progress=None) -> list:
         narration = shot["narration"]
         mood = shot.get("mood", "neutral")
         filename = f"voice_{i + 1}.mp3"
-        path = generate_tts(narration, filename, mood=mood)
+        path = generate_tts(narration, filename, mood=mood, output_dir=output_dir)
         results.append({
             "shot_number": shot["shot_number"],
             "audio_path": path,

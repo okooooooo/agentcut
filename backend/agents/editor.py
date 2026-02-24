@@ -15,9 +15,9 @@ def get_media_duration(filepath: str) -> float:
     return float(info["format"]["duration"])
 
 
-def create_subtitle_file(shots: list, video_durations: list) -> str:
+def create_subtitle_file(shots: list, video_durations: list, output_dir: str = None) -> str:
     """Create an SRT subtitle file from shot data."""
-    srt_path = os.path.join(OUTPUT_DIR, "subtitles.srt")
+    srt_path = os.path.join(output_dir or OUTPUT_DIR, "subtitles.srt")
     offset = 0.0
 
     with open(srt_path, "w", encoding="utf-8") as f:
@@ -45,14 +45,15 @@ def _format_time(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
-def concat_videos(video_paths: list) -> str:
+def concat_videos(video_paths: list, output_dir: str = None) -> str:
     """Concatenate video clips into a single video."""
-    concat_list = os.path.join(OUTPUT_DIR, "concat_list.txt")
+    _dir = output_dir or OUTPUT_DIR
+    concat_list = os.path.join(_dir, "concat_list.txt")
     with open(concat_list, "w") as f:
         for path in video_paths:
             f.write(f"file '{os.path.abspath(path)}'\n")
 
-    concat_path = os.path.join(OUTPUT_DIR, "concat.mp4")
+    concat_path = os.path.join(_dir, "concat.mp4")
     subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
         "-i", concat_list,
@@ -62,14 +63,15 @@ def concat_videos(video_paths: list) -> str:
     return concat_path
 
 
-def concat_audios(audio_paths: list) -> str:
+def concat_audios(audio_paths: list, output_dir: str = None) -> str:
     """Concatenate audio clips into a single audio track."""
-    concat_list = os.path.join(OUTPUT_DIR, "audio_concat_list.txt")
+    _dir = output_dir or OUTPUT_DIR
+    concat_list = os.path.join(_dir, "audio_concat_list.txt")
     with open(concat_list, "w") as f:
         for path in audio_paths:
             f.write(f"file '{os.path.abspath(path)}'\n")
 
-    concat_path = os.path.join(OUTPUT_DIR, "narration.mp3")
+    concat_path = os.path.join(_dir, "narration.mp3")
     subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
         "-i", concat_list,
@@ -85,20 +87,22 @@ def run(
     script: dict,
     bgm_path: str = None,
     on_progress=None,
+    output_dir: str = None,
 ) -> str:
     """Composite final video with voiceover, music, and subtitles. Returns output path."""
+    _dir = output_dir or OUTPUT_DIR
     if on_progress:
         on_progress("Starting video composition...", 0, 4)
 
     # Step 1: Concatenate video clips
     video_paths = [r["video_path"] for r in video_results]
-    concat_video = concat_videos(video_paths)
+    concat_video = concat_videos(video_paths, _dir)
     if on_progress:
         on_progress("Video clips merged", 1, 4)
 
     # Step 2: Concatenate voiceover audio
     audio_paths = [r["audio_path"] for r in voice_results]
-    concat_audio = concat_audios(audio_paths)
+    concat_audio = concat_audios(audio_paths, _dir)
     if on_progress:
         on_progress("Voiceover merged", 2, 4)
 
@@ -110,12 +114,12 @@ def run(
         except Exception:
             video_durations.append(6.0)
 
-    srt_path = create_subtitle_file(script["shots"], video_durations)
+    srt_path = create_subtitle_file(script["shots"], video_durations, _dir)
     if on_progress:
         on_progress("Subtitles created", 3, 4)
 
     # Step 4: Final composition
-    output_path = os.path.join(OUTPUT_DIR, "final.mp4")
+    output_path = os.path.join(_dir, "final.mp4")
     video_duration = get_media_duration(concat_video)
 
     filter_parts = []

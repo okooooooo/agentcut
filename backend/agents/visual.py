@@ -43,21 +43,21 @@ def poll_task(task_id: str, max_wait: int = 300) -> str:
     raise TimeoutError(f"Video generation timed out after {max_wait}s")
 
 
-def download_file(file_id: str, filename: str) -> str:
+def download_file(file_id: str, filename: str, output_dir: str = None) -> str:
     """Download video file by file_id, return local path."""
     url = f"{MINIMAX_BASE_URL}/files/retrieve"
     resp = api_session.get(url, params={"file_id": file_id})
     resp.raise_for_status()
     download_url = resp.json()["file"]["download_url"]
 
-    out_path = os.path.join(OUTPUT_DIR, filename)
+    out_path = os.path.join(output_dir or OUTPUT_DIR, filename)
     video_resp = requests.get(download_url)
     with open(out_path, "wb") as f:
         f.write(video_resp.content)
     return out_path
 
 
-def generate_single_shot(shot: dict, index: int) -> dict:
+def generate_single_shot(shot: dict, index: int, output_dir: str = None) -> dict:
     """Generate video for a single shot. Returns dict with shot info and local path."""
     prompt = shot["video_prompt"]
     duration = shot.get("duration", 6)
@@ -65,7 +65,7 @@ def generate_single_shot(shot: dict, index: int) -> dict:
     task_id = create_video_task(prompt, duration)
     file_id = poll_task(task_id)
     filename = f"shot_{index + 1}.mp4"
-    local_path = download_file(file_id, filename)
+    local_path = download_file(file_id, filename, output_dir)
 
     return {
         "shot_number": shot["shot_number"],
@@ -74,7 +74,7 @@ def generate_single_shot(shot: dict, index: int) -> dict:
     }
 
 
-def run(script: dict, on_progress=None) -> list:
+def run(script: dict, on_progress=None, output_dir: str = None) -> list:
     """Generate video clips for all shots in parallel. Returns list of shot results."""
     shots = script["shots"]
     results = [None] * len(shots)
@@ -82,7 +82,7 @@ def run(script: dict, on_progress=None) -> list:
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {}
         for i, shot in enumerate(shots):
-            future = executor.submit(generate_single_shot, shot, i)
+            future = executor.submit(generate_single_shot, shot, i, output_dir)
             futures[future] = i
 
         for future in as_completed(futures):

@@ -46,9 +46,15 @@ Visual, Voice, and Music agents run **in parallel** after the Script is ready. T
 
 - **Multi-agent SOP** -- 6 specialized agents, each with a single responsibility, orchestrated in a production pipeline
 - **Parallel execution** -- Video, voice, and music generation run concurrently to minimize total wait time
-- **Real-time progress** -- SSE streaming shows every agent's status and logs as the pipeline runs
+- **Real-time progress** -- SSE streaming shows every agent's status with completed/active/pending card states and elapsed timer
 - **One prompt, full video** -- From text description to a complete MP4 with narration, subtitles, and background music
 - **~$0.50 per video** -- Typical cost for a 3-shot video using MiniMax APIs
+- **Style presets** -- 5 one-click preset templates (Tech Product, Travel Vlog, Social Media Ad, Explainer, Brand Story)
+- **Script preview** -- Collapsible preview of the production script after the Script agent completes
+- **Production summary** -- Total time, shot count, agent count, and estimated cost displayed after video completion
+- **Job isolation** -- Each job gets a separate output directory, enabling safe concurrent production
+- **Auto-cleanup** -- Jobs older than 1 hour are automatically cleaned up (memory + disk)
+- **Graceful error handling** -- Per-stage error propagation with structured logging and frontend error display
 
 ## Tech Stack
 
@@ -142,6 +148,12 @@ Estimated total per video: **~$0.40-0.70**
 **API key errors**: Make sure `.env` contains a valid `MINIMAX_API_KEY`. The server will refuse to start if the key is missing.
 
 **Video generation timeout**: Hailuo video generation can take 2-5 minutes per shot. The pipeline polls every 10 seconds with a 5-minute timeout per shot.
+
+**Music generation fails**: Music generation is non-blocking. If it fails, the pipeline continues and the Music card shows an amber "Skipped" state. The final video is produced without background music.
+
+**LLM returns invalid JSON**: Director and Script agents automatically retry once with an explicit "return valid JSON" instruction if the first response fails to parse.
+
+**Concurrent jobs**: Each job writes to its own `backend/output/job_{id}/` directory. Multiple simultaneous productions will not conflict.
 
 ## Project Structure
 

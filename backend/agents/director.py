@@ -34,6 +34,40 @@ Respond ONLY with valid JSON. No markdown, no explanation. Example format:
 }"""
 
 
+def _strip_markdown_fences(text: str) -> str:
+    """Strip markdown code fences from LLM response."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+    return text
+
+
+def _call_llm(messages: list, max_tokens: int = 2000) -> str:
+    """Call MiniMax LLM and return the content string."""
+    url = f"{MINIMAX_BASE_URL}/text/chatcompletion_v2"
+    payload = {
+        "model": "MiniMax-M1",
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": max_tokens,
+    }
+    resp = api_session.post(url, json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise RuntimeError(f"MiniMax API error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
+
+    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    if not content:
+        raise RuntimeError("MiniMax API returned empty response")
+    return content
+
+
 def run(user_prompt: str, duration: int = 30, num_shots: int = 3) -> dict:
     """Generate a shot outline from user's creative prompt."""
     user_message = (
@@ -42,36 +76,17 @@ def run(user_prompt: str, duration: int = 30, num_shots: int = 3) -> dict:
         f"Each shot should be approximately {duration // num_shots} seconds."
     )
 
-    url = f"{MINIMAX_BASE_URL}/text/chatcompletion_v2"
-    payload = {
-        "model": "MiniMax-M1",
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        "temperature": 0.7,
-        "max_tokens": 2000,
-    }
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
 
-    resp = api_session.post(url, json=payload)
-    resp.raise_for_status()
-    data = resp.json()
-
-    # Check for API-level errors (e.g. insufficient balance)
-    base_resp = data.get("base_resp", {})
-    if base_resp.get("status_code", 0) != 0:
-        raise RuntimeError(f"MiniMax API error: {base_resp.get('status_msg', 'unknown')} (code {base_resp.get('status_code')})")
-
-    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-    if not content:
-        raise RuntimeError("MiniMax API returned empty response")
-
-    # Parse JSON from response (handle potential markdown wrapping)
-    content = content.strip()
-    if content.startswith("```"):
-        content = content.split("\n", 1)[1] if "\n" in content else content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-
-    return json.loads(content)
+    content = _call_llm(messages)
+    try:
+        return json.loads(_strip_markdown_fences(content))
+    except json.JSONDecodeError:
+        # Retry once with explicit JSON instruction
+        messages.append({"role": "assistant", "content": content})
+        messages.append({"role": "user", "content": "Your response was not valid JSON. Please return ONLY valid JSON with no markdown or extra text."})
+        content = _call_llm(messages)
+        return json.loads(_strip_markdown_fences(content))
